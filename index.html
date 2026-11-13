@@ -4,82 +4,117 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Virtual Bestie 🎀</title>
+  <title>My Bestie | Virtual Bestie</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <header>
-    <div class="logo">♡ Virtual Bestie</div>
-    <div class="coins">⭐ <span id="coins">100</span></div>
+  <header class="home-header">
+    <a href="index.html" class="home-logo">♡ virtual bestie</a>
+
+    <div class="user-area">
+      <span id="username">Welcome!</span>
+      <span class="coin-display">⭐ <b id="coins">100</b></span>
+      <button id="logoutButton" class="logout-button">Log out</button>
+    </div>
   </header>
 
-  <main>
-    <section class="intro">
-      <p class="tag">YOUR LITTLE HAPPY PLACE</p>
-      <h1>Meet your new <span>bestie.</span></h1>
-      <p>Een klein vriendje, heel veel liefde! 💗</p>
+  <main class="home-main">
+
+    <section class="home-intro">
+      <p class="eyebrow">YOUR LITTLE HAPPY PLACE</p>
+      <h1>Welcome to your <em>world.</em></h1>
+      <p>Your bestie has been waiting for you. ♡</p>
     </section>
 
-    <section class="game">
-      <div class="pet-card">
-        <div class="scene">
-          <div class="sun">☀️</div>
-          <div class="pet" id="pet">
-            <div class="ears">🐰</div>
-          </div>
-          <div class="speech" id="speech">Hiiii! Ik ben Mochi! ♡</div>
-        </div>
+    <section class="home-grid">
 
-        <h2 id="petName">Mochi ✨</h2>
-        <button class="rename" onclick="renamePet()">✏️ Change name</button>
+      <article class="pet-panel">
 
-        <div class="level">LEVEL <span id="level">1</span></div>
-        <div class="xp"><div id="xpBar"></div></div>
-        <p class="xp-text"><span id="xp">0</span> / 100 XP</p>
-      </div>
+        <div class="pet-scene">
+          <div class="scene-sun">☀</div>
+          <div class="scene-flower">✿</div>
 
-      <div class="dashboard">
-        <div class="card">
-          <h2>♡ Bestie status</h2>
-          <div class="stat">
-            <p>Happiness <span id="happyText">85%</span></p>
-            <div class="bar"><div id="happyBar" class="pink"></div></div>
-          </div>
-          <div class="stat">
-            <p>Hunger <span id="foodText">65%</span></p>
-            <div class="bar"><div id="foodBar" class="yellow"></div></div>
-          </div>
-          <div class="stat">
-            <p>Energy <span id="energyText">75%</span></p>
-            <div class="bar"><div id="energyBar" class="purple"></div></div>
-          </div>
-          <div class="stat">
-            <p>Cleanliness <span id="cleanText">90%</span></p>
-            <div class="bar"><div id="cleanBar" class="blue"></div></div>
+          <div class="pet-character" id="petCharacter">🐰</div>
+
+          <div class="pet-speech" id="speech">
+            Hiiii! I missed you! ♡
           </div>
         </div>
 
-        <div class="card">
-          <h2>🎀 Spend time together</h2>
-          <div class="actions">
-            <button onclick="feed()">🍓<span>Feed</span></button>
-            <button onclick="play()">🧸<span>Play</span></button>
-            <button onclick="sleep()">💤<span>Sleep</span></button>
-            <button onclick="bath()">🫧<span>Bath</span></button>
+        <div class="pet-info">
+          <div>
+            <p class="eyebrow">YOUR LITTLE BESTIE</p>
+            <h2 id="petName">Mochi</h2>
           </div>
+
+          <button id="renameButton" class="soft-button">
+            ✎ Rename
+          </button>
         </div>
 
-        <div class="card message">
-          <h2>💌 Bestie message</h2>
-          <p id="message">You make my little world brighter!</p>
+        <div class="level-info">
+          <span>LEVEL <b id="level">1</b></span>
+          <span id="xpText">0 / 100 XP</span>
         </div>
-      </div>
+
+        <div class="xp-track">
+          <div id="xpBar"></div>
+        </div>
+
+      </article>
+
+      <aside class="right-panel">
+
+        <section class="dashboard-card">
+          <p class="eyebrow">BESTIE CHECK-IN</p>
+          <h2>How are we doing?</h2>
+
+          <div class="stat">
+            <div><span>♡ Happiness</span><b id="happyText">85%</b></div>
+            <div class="stat-track"><div id="happyBar" class="pink"></div></div>
+          </div>
+
+          <div class="stat">
+            <div><span>🍓 Hunger</span><b id="hungerText">65%</b></div>
+            <div class="stat-track"><div id="hungerBar" class="gold"></div></div>
+          </div>
+
+          <div class="stat">
+            <div><span>☁ Energy</span><b id="energyText">75%</b></div>
+            <div class="stat-track"><div id="energyBar" class="lilac"></div></div>
+          </div>
+
+          <div class="stat">
+            <div><span>🫧 Cleanliness</span><b id="cleanText">90%</b></div>
+            <div class="stat-track"><div id="cleanBar" class="green"></div></div>
+          </div>
+        </section>
+
+        <section class="dashboard-card">
+          <p class="eyebrow">QUALITY TIME</p>
+          <h2>Spend time together</h2>
+
+          <div class="action-grid">
+            <button data-action="feed">🍓<span>Feed</span></button>
+            <button data-action="play">🧸<span>Play</span></button>
+            <button data-action="sleep">💤<span>Sleep</span></button>
+            <button data-action="bath">🫧<span>Bath</span></button>
+          </div>
+        </section>
+
+        <section class="dashboard-card message-card">
+          <p class="eyebrow">A LITTLE NOTE</p>
+          <p id="message">Every day is better with you. ♡</p>
+        </section>
+
+      </aside>
     </section>
+
   </main>
 
-  <footer>MADE WITH ♡ FOR YOUR BESTIE</footer>
+  <footer>MADE WITH ♡ FOR YOUR LITTLE BESTIE</footer>
 
-  <script src="script.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
