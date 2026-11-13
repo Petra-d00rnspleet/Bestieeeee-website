@@ -1,0 +1,70 @@
+
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome | Virtual Bestie</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+
+  <main class="auth-container">
+
+    <div class="auth-brand">♡ virtual bestie</div>
+
+    <div class="auth-decoration">✧</div>
+
+    <div class="auth-card">
+
+      <div class="auth-icon">♡</div>
+
+      <p class="eyebrow">YOUR LITTLE HAPPY PLACE</p>
+
+      <h1 id="formTitle">Welcome <em>back.</em></h1>
+
+      <p class="auth-description" id="formDescription">
+        Your little bestie is waiting for you.
+      </p>
+
+      <div class="tabs">
+        <button class="tab active" id="loginTab">Log in</button>
+        <button class="tab" id="signupTab">Sign up</button>
+      </div>
+
+      <form id="authForm">
+
+        <label for="email">Email address</label>
+        <input id="email" type="email"
+          placeholder="you@example.com" required>
+
+        <label for="password">Password</label>
+        <input id="password" type="password"
+          placeholder="Your password" minlength="6" required>
+
+        <button class="main-button" id="submitButton">
+          Log in →
+        </button>
+
+      </form>
+
+      <div class="separator"><span>OR CONTINUE WITH</span></div>
+
+      <button class="google-button" id="googleButton">
+        <span class="google-g">G</span>
+        Continue with Google
+      </button>
+
+      <p class="auth-error" id="error"></p>
+
+      <p class="auth-footer">
+        Made with ♡ for your little bestie
+      </p>
+
+    </div>
+
+  </main>
+
+  <script type="module" src="login.js"></script>
+</body>
+</html>
