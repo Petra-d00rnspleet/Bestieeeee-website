@@ -12,13 +12,13 @@ exports.askBestie = onCall(
     }
 
     const messages = request.data && request.data.messages;
-    if (!Array.isArray(messages) || messages.length === 0 || messages.length > 12) {
+    if (!Array.isArray(messages) || messages.length === 0 || messages.length > 11) {
       throw new HttpsError("invalid-argument", "Send a short conversation.");
     }
 
     const safeMessages = messages.map((message) => {
       if (!message || !["user", "assistant"].includes(message.role) ||
-          typeof message.content !== "string") {
+          typeof message.content !== "string" || !message.content.trim()) {
         throw new HttpsError("invalid-argument", "Invalid chat message.");
       }
       return {
@@ -28,16 +28,21 @@ exports.askBestie = onCall(
     });
 
     try {
-      const client = new OpenAI({ apiKey: OPENAI_API_KEY.value() });
+      const apiKey = OPENAI_API_KEY.value();
+      if (!apiKey) {
+        throw new HttpsError("failed-precondition", "The OpenAI API key is not configured.");
+      }
+
+      const client = new OpenAI({ apiKey });
       const response = await client.responses.create({
-        model: "gpt-5.5",
+        model: "gpt-6-luna",
         store: false,
         instructions: [
           "You are Virtual Bestie's friendly, thoughtful chat companion for a teen audience.",
           "Respond to the actual message and use the recent conversation for context. Do not repeat generic greetings or canned replies.",
           "Be warm, natural, specific, and honest. If you are unsure, say so instead of inventing facts.",
           "Use clear age-appropriate language. Do not produce sexual content, self-harm instructions, dangerous activity instructions, or guidance for obtaining restricted items.",
-          "Do not ask for passwords, home addresses, phone numbers, or other sensitive personal information.",
+          "Do not ask for passwords, home addresses, phone numbers, school names, or other sensitive personal information.",
           "Do not claim to be a human, a real-life friend, or a substitute for trusted adults or professional help.",
           "If the user may be in immediate danger or is dealing with something serious, encourage them to contact a trusted adult or local emergency help.",
           "Answer in the language the user uses. Keep replies concise unless detail is useful."
@@ -52,8 +57,23 @@ exports.askBestie = onCall(
       }
       return { answer };
     } catch (error) {
-      console.error("OpenAI request failed:", error.message);
-      throw new HttpsError("internal", "The chat service is temporarily unavailable.");
+      if (error instanceof HttpsError) throw error;
+      console.error("OpenAI request failed:", {
+        status: error.status,
+        code: error.code,
+        message: error.message
+      });
+
+      if (error.status === 401 || error.status === 403) {
+        throw new HttpsError("failed-precondition", "The OpenAI API key is invalid or lacks access.");
+      }
+      if (error.status === 404) {
+        throw new HttpsError("failed-precondition", "The configured model is not available to this API account.");
+      }
+      if (error.status === 429) {
+        throw new HttpsError("resource-exhausted", "The AI API quota or rate limit was reached.");
+      }
+      throw new HttpsError("internal", "The AI service could not complete the request.");
     }
   }
 );
