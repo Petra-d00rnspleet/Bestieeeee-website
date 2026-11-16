@@ -1,19 +1,15 @@
-
-import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {
   getAuth,
   setPersistence,
   browserLocalPersistence,
   GoogleAuthProvider
 } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import { getDatabase } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import { getFunctions } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-functions.js";
 
-import {
-  getDatabase
-} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
-
+// Dit zijn de Firebase web-app instellingen uit je bestaande project.
+// Deze clientconfiguratie is geen vervanging voor databasebeveiligingsregels.
 const firebaseConfig = {
   apiKey: "AIzaSyB_gIvmh07gYLw6kbb9-EWaxm_MnDavfmA",
   authDomain: "bestelwebsitenl.firebaseapp.com",
@@ -25,14 +21,8 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-
 export const auth = getAuth(app);
-
 export const db = getDatabase(app);
-
+export const functions = getFunctions(app, "europe-west1");
 export const googleProvider = new GoogleAuthProvider();
-
-export const persistenceReady = setPersistence(
-  auth,
-  browserLocalPersistence
-);
+export const persistenceReady = setPersistence(auth, browserLocalPersistence);
