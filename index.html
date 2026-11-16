@@ -1,127 +1,59 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#faf6fb">
-  <title>Virtual Bestie ♡</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <a class="brand" href="index.html"><span class="brand-heart">♡</span><span>virtual bestie</span></a>
-      <div class="side-caption">YOUR LITTLE HAPPY PLACE</div>
-      <nav class="nav-list" aria-label="Hoofdnavigatie">
-        <button class="nav-item active" data-page="home"><span>⌂</span> Home</button>
-        <button class="nav-item" data-page="character"><span>♡</span> My Character</button>
-        <button class="nav-item" data-page="room"><span>⌂</span> My Room</button>
-        <button class="nav-item" data-page="diary"><span>✎</span> My Diary</button>
-        <button class="nav-item" data-page="chat"><span>☁</span> My Chat</button>
-      </nav>
-      <div class="sidebar-bottom">
-        <div class="tiny-flower">✿</div>
-        <p>A little world<br>that is yours.</p>
-        <button id="logoutButton" class="logout-button">Log out ↗</button>
-      </div>
-    </aside>
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
+const OpenAI = require("openai");
 
-    <main class="main-area">
-      <header class="topbar">
-        <div>
-          <div class="eyebrow">YOUR LITTLE HAPPY PLACE</div>
-          <h1 id="pageTitle">Welcome to your world <em>♡</em></h1>
-        </div>
-        <div class="profile-pill"><span id="headerPet">🐰</span><span id="headerName">My bestie</span></div>
-      </header>
+const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 
-      <section class="page active" id="page-home">
-        <div class="welcome-card">
-          <div>
-            <div class="eyebrow">A WORLD JUST FOR YOU</div>
-            <h2>Your own little<br><em>happy place.</em></h2>
-            <p>Take care of your bestie, write down your thoughts and have a little chat. ♡</p>
-            <button class="primary-button" data-go="character">Meet your bestie <span>→</span></button>
-          </div>
-          <div class="welcome-pet" id="homePet">🐰</div>
-          <span class="sparkle sparkle-one">✧</span><span class="sparkle sparkle-two">✿</span>
-        </div>
-        <div class="section-heading"><div><div class="eyebrow">YOUR SPACE</div><h2>Where would you like to go?</h2></div></div>
-        <div class="feature-grid">
-          <button class="feature-card feature-character" data-go="character"><span class="feature-icon">🐰</span><strong>My Character</strong><small>Choose your little friend</small><span class="card-arrow">↗</span></button>
-          <button class="feature-card feature-room" data-go="room"><span class="feature-icon">🛏️</span><strong>My Room</strong><small>Your own empty little room</small><span class="card-arrow">↗</span></button>
-          <button class="feature-card feature-diary" data-go="diary"><span class="feature-icon">📔</span><strong>My Diary</strong><small>A place for your thoughts</small><span class="card-arrow">↗</span></button>
-          <button class="feature-card feature-chat" data-go="chat"><span class="feature-icon">💬</span><strong>My Chat</strong><small>Talk about what's on your mind</small><span class="card-arrow">↗</span></button>
-        </div>
-      </section>
+exports.askBestie = onCall(
+  { region: "europe-west1", secrets: [OPENAI_API_KEY], timeoutSeconds: 60 },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Log in first.");
+    }
 
-      <section class="page" id="page-character">
-        <div class="content-card character-layout">
-          <div class="character-preview">
-            <div class="preview-label">YOUR LITTLE BESTIE</div>
-            <div id="characterPreview" class="big-character">🐰</div>
-            <div id="previewName" class="preview-name">Mochi</div>
-            <div class="preview-subtitle">your new little friend ♡</div>
-          </div>
-          <div class="editor">
-            <div class="eyebrow">LET'S MAKE A BESTIE</div>
-            <h2>Choose your <em>poppetje.</em></h2>
-            <p class="muted">Pick a character and give your bestie a name.</p>
-            <label for="petNameInput">Name</label>
-            <input id="petNameInput" maxlength="18" placeholder="Give your bestie a name">
-            <div class="field-label">Choose your character</div>
-            <div class="character-options">
-              <button class="character-option selected" data-pet="🐰" aria-label="Konijn">🐰</button>
-              <button class="character-option" data-pet="🐻" aria-label="Beer">🐻</button>
-              <button class="character-option" data-pet="🐱" aria-label="Kat">🐱</button>
-              <button class="character-option" data-pet="🐥" aria-label="Kuiken">🐥</button>
-              <button class="character-option" data-pet="🐼" aria-label="Panda">🐼</button>
-            </div>
-            <button id="saveCharacter" class="primary-button">Save my bestie ♡</button>
-            <p id="characterStatus" class="status-message" aria-live="polite"></p>
-          </div>
-        </div>
-      </section>
+    const messages = request.data && request.data.messages;
+    if (!Array.isArray(messages) || messages.length === 0 || messages.length > 12) {
+      throw new HttpsError("invalid-argument", "Send a short conversation.");
+    }
 
-      <section class="page" id="page-room">
-        <div class="room-intro"><div class="eyebrow">A LITTLE SPACE OF YOUR OWN</div><h2>Welcome to your <em>room.</em></h2><p class="muted">A quiet, empty room for you and your bestie. We'll decorate it another time. ♡</p></div>
-        <div class="room-scene">
-          <div class="room-wall"></div><div class="room-floor"></div>
-          <div class="room-window"><div class="window-sky">☁</div><div class="window-sill"></div></div>
-          <div class="room-sun">☼</div><div class="room-pet" id="roomPet">🐰</div>
-          <div class="room-pet-name" id="roomPetName">Mochi</div>
-          <div class="room-note">your room, your rules ♡</div>
-        </div>
-      </section>
+    const safeMessages = messages.map((message) => {
+      if (!message || !["user", "assistant"].includes(message.role) ||
+          typeof message.content !== "string") {
+        throw new HttpsError("invalid-argument", "Invalid chat message.");
+      }
+      return {
+        role: message.role,
+        content: message.content.slice(0, 2000)
+      };
+    });
 
-      <section class="page" id="page-diary">
-        <div class="diary-header"><div><div class="eyebrow">A LITTLE SPACE FOR YOUR THOUGHTS</div><h2>My <em>diary.</em></h2><p class="muted">Write whatever you'd like to remember. Your entries are saved to your account.</p></div><div class="diary-flower">✿</div></div>
-        <div class="content-card diary-compose">
-          <label for="diaryText">Dear diary...</label>
-          <textarea id="diaryText" maxlength="5000" placeholder="How was your day? What's on your mind?"></textarea>
-          <div class="compose-footer"><span id="diaryCount">0 / 5000</span><button id="saveDiary" class="primary-button">Save entry ♡</button></div>
-          <p id="diaryStatus" class="status-message" aria-live="polite"></p>
-        </div>
-        <div class="section-heading"><div><div class="eyebrow">LITTLE MEMORIES</div><h2>My entries</h2></div></div>
-        <div id="diaryEntries" class="diary-entries"><div class="empty-state">Your diary is waiting for its first little story. ♡</div></div>
-      </section>
+    try {
+      const client = new OpenAI({ apiKey: OPENAI_API_KEY.value() });
+      const response = await client.responses.create({
+        model: "gpt-5.5",
+        store: false,
+        instructions: [
+          "You are Virtual Bestie's friendly, thoughtful chat companion for a teen audience.",
+          "Respond to the actual message and use the recent conversation for context. Do not repeat generic greetings or canned replies.",
+          "Be warm, natural, specific, and honest. If you are unsure, say so instead of inventing facts.",
+          "Use clear age-appropriate language. Do not produce sexual content, self-harm instructions, dangerous activity instructions, or guidance for obtaining restricted items.",
+          "Do not ask for passwords, home addresses, phone numbers, or other sensitive personal information.",
+          "Do not claim to be a human, a real-life friend, or a substitute for trusted adults or professional help.",
+          "If the user may be in immediate danger or is dealing with something serious, encourage them to contact a trusted adult or local emergency help.",
+          "Answer in the language the user uses. Keep replies concise unless detail is useful."
+        ].join(" "),
+        input: safeMessages,
+        max_output_tokens: 500
+      });
 
-      <section class="page" id="page-chat">
-        <div class="chat-heading"><div><div class="eyebrow">A FRIENDLY LITTLE CHAT</div><h2>Let's <em>talk.</em></h2><p class="muted">Ask questions, share ideas or talk about your day.</p></div><div class="chat-cloud">☁</div></div>
-        <div class="chat-card">
-          <div class="chat-notice">♡ Be kind to yourself. Don't share passwords, your address or other private information.</div>
-          <div id="chatMessages" class="chat-messages"><div class="chat-welcome"><span>🌷</span><strong>Hi there!</strong><p>What's on your mind today?</p></div></div>
-          <form id="chatForm" class="chat-compose">
-            <input id="chatInput" maxlength="2000" autocomplete="off" placeholder="Write a message..." aria-label="Bericht">
-            <button type="submit" aria-label="Verstuur bericht">➤</button>
-          </form>
-          <p id="chatStatus" class="status-message" aria-live="polite"></p>
-        </div>
-      </section>
-
-      <footer>MADE WITH ♡ FOR YOUR LITTLE WORLD</footer>
-    </main>
-  </div>
-  <script type="module" src="./app.js"></script>
-</body>
-</html>
+      const answer = (response.output_text || "").trim();
+      if (!answer) {
+        throw new Error("The model returned an empty answer.");
+      }
+      return { answer };
+    } catch (error) {
+      console.error("OpenAI request failed:", error.message);
+      throw new HttpsError("internal", "The chat service is temporarily unavailable.");
+    }
+  }
+);
