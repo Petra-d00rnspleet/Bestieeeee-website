@@ -19,11 +19,6 @@
         <button class="nav-item" data-page="diary"><span>✎</span> My Diary</button>
         <button class="nav-item" data-page="chat"><span>☁</span> My Chat</button>
       </nav>
-      <div class="sidebar-bottom">
-        <div class="tiny-flower">✿</div>
-        <p>A little world<br>that is yours.</p>
-        <button id="logoutButton" class="logout-button">Log out ↗</button>
-      </div>
     </aside>
 
     <main class="main-area">
@@ -32,7 +27,10 @@
           <div class="eyebrow">YOUR LITTLE HAPPY PLACE</div>
           <h1 id="pageTitle">Welcome to your world <em>♡</em></h1>
         </div>
-        <div class="profile-pill"><span id="headerPet">🐰</span><span id="headerName">My bestie</span></div>
+        <div class="topbar-actions">
+          <div class="profile-pill"><span id="headerPet">🐰</span><span id="headerName">My bestie</span></div>
+          <button id="logoutButton" class="top-logout">Log out ↗</button>
+        </div>
       </header>
 
       <section class="page active" id="page-home">
@@ -115,7 +113,7 @@
             <input id="chatInput" maxlength="2000" autocomplete="off" placeholder="Write a message..." aria-label="Bericht">
             <button type="submit" aria-label="Verstuur bericht">➤</button>
           </form>
-          <p id="chatStatus" class="status-message" aria-live="polite"></p>
+          <div id="chatStatus" class="chat-status" role="status" aria-live="polite"></div>
         </div>
       </section>
 
