@@ -1,4 +1,3 @@
-
 import {
   auth,
   db,
@@ -22,7 +21,14 @@ import {
 const $ = id => document.getElementById(id);
 
 let mode = "login";
+let authActionStarted = false;
 
+// Firebase persistence mag de knoppen niet blokkeren.
+persistenceReady.catch(error => {
+  console.error("Firebase persistence error:", error);
+});
+
+// Login / registratie wisselen
 function setMode(newMode) {
   mode = newMode;
 
@@ -40,14 +46,22 @@ function setMode(newMode) {
       : "Let's create your own little world.";
 
   $("submitButton").textContent =
-    mode === "login" ? "Log in →" : "Create account →";
+    mode === "login"
+      ? "Log in →"
+      : "Create account →";
 
   $("error").textContent = "";
 }
 
-$("loginTab").addEventListener("click", () => setMode("login"));
-$("signupTab").addEventListener("click", () => setMode("signup"));
+$("loginTab").addEventListener("click", () => {
+  setMode("login");
+});
 
+$("signupTab").addEventListener("click", () => {
+  setMode("signup");
+});
+
+// Nieuw gebruikersprofiel aanmaken
 async function createProfile(user) {
   const userRef = ref(db, `users/${user.uid}`);
   const snapshot = await get(userRef);
@@ -76,66 +90,126 @@ async function createProfile(user) {
   }
 }
 
-await persistenceReady;
-
+// Alleen bestaande gebruikers automatisch doorsturen.
 onAuthStateChanged(auth, user => {
-  if (user) {
+  if (user && !authActionStarted) {
     window.location.replace("index.html");
   }
 });
 
+// Login en registratie
 $("authForm").addEventListener("submit", async event => {
   event.preventDefault();
 
   const email = $("email").value.trim();
   const password = $("password").value;
 
-  $("submitButton").disabled = true;
-  $("error").textContent = "";
+  const button = $("submitButton");
+  const errorBox = $("error");
+
+  button.disabled = true;
+  errorBox.textContent = "";
+
+  authActionStarted = true;
 
   try {
+    // Wacht hier op Firebase, niet bij het laden van de pagina.
+    await persistenceReady;
+
     if (mode === "signup") {
       const result = await createUserWithEmailAndPassword(
-        auth, email, password
+        auth,
+        email,
+        password
       );
 
       await createProfile(result.user);
 
     } else {
       await signInWithEmailAndPassword(
-        auth, email, password
+        auth,
+        email,
+        password
       );
     }
 
+    window.location.replace("index.html");
+
   } catch (error) {
-    $("error").textContent = getErrorMessage(error.code);
-    $("submitButton").disabled = false;
+    console.error("Authentication error:", error);
+
+    errorBox.textContent = getErrorMessage(error.code);
+
+    button.disabled = false;
+    authActionStarted = false;
   }
 });
 
+// Google login
 $("googleButton").addEventListener("click", async () => {
-  $("googleButton").disabled = true;
+  const button = $("googleButton");
+
+  button.disabled = true;
   $("error").textContent = "";
 
+  authActionStarted = true;
+
   try {
-    const result = await signInWithPopup(auth, googleProvider);
+    await persistenceReady;
+
+    const result = await signInWithPopup(
+      auth,
+      googleProvider
+    );
+
     await createProfile(result.user);
 
+    window.location.replace("index.html");
+
   } catch (error) {
+    console.error("Google authentication error:", error);
+
     $("error").textContent = getErrorMessage(error.code);
-    $("googleButton").disabled = false;
+
+    button.disabled = false;
+    authActionStarted = false;
   }
 });
 
+// Foutmeldingen
 function getErrorMessage(code) {
   const messages = {
-    "auth/email-already-in-use": "This email is already registered.",
-    "auth/invalid-email": "Please enter a valid email address.",
-    "auth/weak-password": "Your password needs at least 6 characters.",
-    "auth/invalid-credential": "Email or password is incorrect.",
-    "auth/popup-closed-by-user": "Google login was cancelled.",
-    "auth/unauthorized-domain": "This domain is not authorized in Firebase."
+    "auth/email-already-in-use":
+      "This email is already registered.",
+
+    "auth/invalid-email":
+      "Please enter a valid email address.",
+
+    "auth/weak-password":
+      "Your password needs at least 6 characters.",
+
+    "auth/invalid-credential":
+      "Email or password is incorrect.",
+
+    "auth/user-not-found":
+      "No account found with this email.",
+
+    "auth/wrong-password":
+      "Incorrect password.",
+
+    "auth/popup-closed-by-user":
+      "Google login was cancelled.",
+
+    "auth/unauthorized-domain":
+      "This domain is not authorized in Firebase.",
+
+    "auth/network-request-failed":
+      "Network error. Please check your internet connection.",
+
+    "auth/operation-not-allowed":
+      "This login method is not enabled in Firebase."
   };
 
-  return messages[code] || "Something went wrong. Please try again.";
+  return messages[code] ||
+    "Something went wrong: " + (code || "unknown error");
 }
