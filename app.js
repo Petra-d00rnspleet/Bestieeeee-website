@@ -1,9 +1,8 @@
-import { auth, db, functions, persistenceReady } from "./firebase.js";
+import { auth, db, persistenceReady } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 import {
   ref, get, set, update, push, remove, onValue
 } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
-import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-functions.js";
 
 const $ = id => document.getElementById(id);
 const petChoices = ["🐰", "🐻", "🐱", "🐥", "🐼"];
@@ -169,39 +168,45 @@ $("saveDiary").addEventListener("click", async () => {
   }
 });
 
-// Keep the callable function in the same region as functions/index.js.
-const askBestie = httpsCallable(functions, "askBestie", { timeout: 60000 });
-const chatSendButton = $("chatForm").querySelector('button[type="submit"]');
-
-function explainChatError(error) {
-  console.error("Virtual Bestie chat error:", error);
-  const code = error?.code || "";
-  if (code.includes("functions/not-found")) {
-    return "De AI-functie is nog niet naar Firebase gepubliceerd. Volg de stappen 'AI-chat installeren' in README.";
-  }
-  if (code.includes("functions/unauthenticated")) {
-    return "Je inlogsessie is verlopen. Log uit en log opnieuw in.";
-  }
-  if (code.includes("functions/permission-denied")) {
-    return "Firebase heeft deze aanvraag geweigerd. Controleer de rechten van je account.";
-  }
-  if (code.includes("functions/resource-exhausted")) {
-    return "De AI-dienst heeft tijdelijk te veel aanvragen of geen beschikbaar tegoed. Probeer het later opnieuw.";
-  }
-  if (code.includes("functions/deadline-exceeded")) {
-    return "De AI duurde te lang met antwoorden. Probeer het nog een keer.";
-  }
-  if (code.includes("functions/failed-precondition")) {
-    return "De AI-instellingen zijn nog niet goed ingesteld. Controleer de API-sleutel en het model in Firebase.";
-  }
-  if (code.includes("functions/internal")) {
-    return "De AI-server kreeg een fout. Controleer de Firebase Function-logs; vaak ontbreekt de API-sleutel of is de modelsleutel niet beschikbaar.";
-  }
-  if (code.includes("functions/unavailable")) {
-    return "De AI-server is tijdelijk niet bereikbaar. Probeer het straks opnieuw.";
-  }
-  return `Er ging iets mis met de AI-chat (${code || "onbekende fout"}). Controleer de Firebase Function-logs.`;
+// Gratis lokale chat: geen AI-provider, API-sleutel of Cloud Function.
+function choose(items) {
+  return items[Math.floor(Math.random() * items.length)];
 }
+
+function makeBestieReply(message) {
+  const text = message.toLowerCase().trim();
+  const petName = profile?.pet?.name || "Mochi";
+
+  if (/\b(hallo|hoi|hey|heyy|hi|goedemorgen|goedemiddag|goedenavond)\b/.test(text))
+    return choose(["Hiiii! ♡ Wat leuk dat je er bent. Hoe gaat het vandaag met je?", "Heehee! 🌷 Waar zullen we het gezellig over hebben?", "Hoiii! Ik ben er. Wat speelt er vandaag in jouw wereldje?"]);
+  if (/\b(hoe gaat het|hoe is het|alles goed)\b/.test(text))
+    return choose(["Met mij gaat het goed, dankjewel dat je het vraagt! ♡ Hoe gaat het met jou?", "Ik ben helemaal klaar voor een gezellig gesprek. En hoe is jouw dag?", "Prima hier! Vertel eens, hoe gaat het met jou?"]);
+  if (/\b(dank je|dankjewel|thanks|bedankt)\b/.test(text))
+    return choose(["Graag gedaan! ♡", "Natuurlijk! Daar ben ik voor. 🌷", "Geen probleem, fijn dat ik kon helpen!"]);
+  if (/\b(doei|dag|tot later|bye|slaap lekker|welterusten)\b/.test(text))
+    return choose(["Tot snel! Zorg goed voor jezelf. ♡", "Doeidoei! Ik hoop dat je een fijne dag hebt. 🌷", "Tot de volgende keer!"]);
+  if (/\b(speel|spelletje|spelletjes|game|puzzel|raadsel|quiz)\b/.test(text))
+    return "Jaaa, een spelletje! 🎮 Raadsel: wat heeft steden maar geen huizen, bossen maar geen bomen en water maar geen vissen? Typ je antwoord maar!";
+  if (/\b(grapp|mop|lach)\b/.test(text))
+    return choose(["Waarom neemt een paddenstoel altijd de bus? Omdat hij geen sporen wil achterlaten! 🍄", "Wat zegt een nul tegen een acht? Mooie riem! 😂", "Waarom was het boek verdrietig? Het had te veel problemen tussen de kaften. 📚"]);
+  if (/\b(verdrietig|somber|down|niet fijn|rot dag|boos|gestrest|stress)\b/.test(text))
+    return choose(["Dat klinkt als een lastige dag. ♡ Wil je vertellen wat er is gebeurd? Ik luister.", "Ah, dat is vervelend. Wat zit je dwars?", "Wat naar dat je je zo voelt. Wil je erover praten of liever even afleiding?"]);
+  if (/\b(blij|happy|geweldig|super|leuk nieuws|trots)\b/.test(text))
+    return choose(["Awww, wat fijn om te horen!! ♡ Vertel, wat is er gebeurd?", "Jaaa, dat klinkt geweldig! Ik ben benieuwd! ✨", "Dat verdient een klein feestje! Wat maakte je zo blij? 🎉"]);
+  if (/\b(verveel|saai|niks te doen)\b/.test(text))
+    return "Zullen we iets leuks verzinnen? ♡ We kunnen een raadsel doen, een mini-quiz spelen of samen een verhaal bedenken. Waar heb je zin in?";
+  if (/\b(school|huiswerk|toets|leraar|les)\b/.test(text))
+    return choose(["School kan soms best veel zijn. Waar ben je mee bezig? Misschien kan ik helpen het overzichtelijk te maken. ♡", "Hoe gaat het op school de laatste tijd?", "Vertel eens! Gaat het over huiswerk, een vak of iets dat is gebeurd?"]);
+  if (/\b(naam|wie ben jij|wat ben jij)\b/.test(text))
+    return `Ik ben jouw Virtual Bestie! ♡ En jouw poppetje heet ${petName}. Waar zullen we over kletsen?`;
+  if (/\b(weer|temperatuur|regent|weerbericht)\b/.test(text))
+    return "Ik kan het actuele weer niet bekijken, maar ik kan wel helpen bedenken wat je kunt doen op een regenachtige of zonnige dag. ☁️";
+  if (text.endsWith("?") || /\b(waarom|hoe|wat|wanneer|wie|welke|kan je|kun je)\b/.test(text))
+    return choose(["Goede vraag! Ik kan niet alles weten, maar ik denk graag met je mee. Kun je iets meer vertellen?", "Hmm, laten we daar samen over nadenken. Kun je iets meer context geven?", "Ik wil je graag goed begrijpen. Kun je uitleggen wat je precies bedoelt? ♡"]);
+  return choose(["Vertel verder! ♡ Wat vind je daar zelf van?", "Ooh, ik luister. Kun je me daar iets meer over vertellen?", "Dat is interessant! Wat gebeurde er daarna?", "Ik ben benieuwd! Hoe voelde dat voor jou?", "Zullen we daar samen over nadenken?"]);
+}
+
+const chatSendButton = $("chatForm").querySelector('button[type="submit"]');
 
 $("chatForm").addEventListener("submit", async event => {
   event.preventDefault();
@@ -210,7 +215,6 @@ $("chatForm").addEventListener("submit", async event => {
     setChatStatus("Je bent niet ingelogd. Log opnieuw in.", "error");
     return;
   }
-
   const text = $("chatInput").value.trim();
   if (!text) return;
 
@@ -218,33 +222,18 @@ $("chatForm").addEventListener("submit", async event => {
   $("chatInput").value = "";
   $("chatInput").disabled = true;
   chatSendButton.disabled = true;
-  setChatStatus("Your bestie is thinking... ♡");
-
+  setChatStatus("Je bestie denkt even na... ♡");
   const chatRef = ref(db, `users/${currentUser.uid}/chat`);
-
-  // Build context before saving the new message, so it cannot accidentally be duplicated.
-  const recent = Object.entries(chatItems)
-    .sort((a,b) => (a[1].createdAt || 0) - (b[1].createdAt || 0))
-    .slice(-10)
-    .map(([, item]) => ({ role: item.role, content: String(item.text || "").slice(0, 2000) }));
-  recent.push({ role: "user", content: text });
 
   try {
     await set(push(chatRef), { role: "user", text, createdAt: Date.now() });
-    const result = await askBestie({ messages: recent });
-    const answer = result?.data?.answer;
-
-    if (typeof answer !== "string" || !answer.trim()) {
-      throw new Error("The AI function returned an empty answer.");
-    }
-
-    await set(push(chatRef), { role: "assistant", text: answer.trim(), createdAt: Date.now() });
-    setChatStatus("♡");
-    setTimeout(() => {
-      if ($("chatStatus").textContent === "♡") setChatStatus("");
-    }, 1800);
+    await new Promise(resolve => setTimeout(resolve, 350));
+    const answer = makeBestieReply(text);
+    await set(push(chatRef), { role: "assistant", text: answer, createdAt: Date.now() });
+    setChatStatus("");
   } catch (error) {
-    setChatStatus(explainChatError(error), "error");
+    console.error("Saving chat message failed:", error);
+    setChatStatus("Je bericht kon niet worden opgeslagen. Controleer je internetverbinding en probeer opnieuw.", "error");
   } finally {
     sendingChat = false;
     $("chatInput").disabled = false;
