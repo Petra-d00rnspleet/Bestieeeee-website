@@ -1,5 +1,7 @@
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 
 import {
   getAuth,
@@ -25,7 +27,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
+
 export const db = getDatabase(app);
+
 export const googleProvider = new GoogleAuthProvider();
 
 export const persistenceReady = setPersistence(
