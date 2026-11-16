@@ -32,12 +32,22 @@ function showPage(page) {
   history.replaceState(null, "", `#${page}`);
 }
 
+function setChatStatus(message = "", type = "") {
+  const status = $("chatStatus");
+  status.textContent = message;
+  status.className = `chat-status${type ? ` ${type}` : ""}`;
+}
+
 document.querySelectorAll("[data-page]").forEach(button => button.addEventListener("click", () => showPage(button.dataset.page)));
 document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => showPage(button.dataset.go)));
 
 $("logoutButton").addEventListener("click", async () => {
-  await signOut(auth);
-  window.location.replace("login.html");
+  try {
+    await signOut(auth);
+    window.location.replace("login.html");
+  } catch (error) {
+    console.error("Logout failed:", error);
+  }
 });
 
 function defaultProfile(user) {
@@ -114,7 +124,6 @@ function renderChat(items) {
   container.scrollTop = container.scrollHeight;
 }
 
-petChoices.forEach(() => {});
 document.querySelectorAll(".character-option").forEach(button => {
   button.addEventListener("click", () => {
     selectedPet = button.dataset.pet;
@@ -160,40 +169,91 @@ $("saveDiary").addEventListener("click", async () => {
   }
 });
 
-const askBestie = httpsCallable(functions, "askBestie");
+// Keep the callable function in the same region as functions/index.js.
+const askBestie = httpsCallable(functions, "askBestie", { timeout: 60000 });
+const chatSendButton = $("chatForm").querySelector('button[type="submit"]');
+
+function explainChatError(error) {
+  console.error("Virtual Bestie chat error:", error);
+  const code = error?.code || "";
+  if (code.includes("functions/not-found")) {
+    return "De AI-functie is nog niet naar Firebase gepubliceerd. Volg de stappen 'AI-chat installeren' in README.";
+  }
+  if (code.includes("functions/unauthenticated")) {
+    return "Je inlogsessie is verlopen. Log uit en log opnieuw in.";
+  }
+  if (code.includes("functions/permission-denied")) {
+    return "Firebase heeft deze aanvraag geweigerd. Controleer de rechten van je account.";
+  }
+  if (code.includes("functions/resource-exhausted")) {
+    return "De AI-dienst heeft tijdelijk te veel aanvragen of geen beschikbaar tegoed. Probeer het later opnieuw.";
+  }
+  if (code.includes("functions/deadline-exceeded")) {
+    return "De AI duurde te lang met antwoorden. Probeer het nog een keer.";
+  }
+  if (code.includes("functions/failed-precondition")) {
+    return "De AI-instellingen zijn nog niet goed ingesteld. Controleer de API-sleutel en het model in Firebase.";
+  }
+  if (code.includes("functions/internal")) {
+    return "De AI-server kreeg een fout. Controleer de Firebase Function-logs; vaak ontbreekt de API-sleutel of is de modelsleutel niet beschikbaar.";
+  }
+  if (code.includes("functions/unavailable")) {
+    return "De AI-server is tijdelijk niet bereikbaar. Probeer het straks opnieuw.";
+  }
+  return `Er ging iets mis met de AI-chat (${code || "onbekende fout"}). Controleer de Firebase Function-logs.`;
+}
+
 $("chatForm").addEventListener("submit", async event => {
   event.preventDefault();
-  if (sendingChat || !currentUser) return;
+  if (sendingChat) return;
+  if (!currentUser) {
+    setChatStatus("Je bent niet ingelogd. Log opnieuw in.", "error");
+    return;
+  }
+
   const text = $("chatInput").value.trim();
   if (!text) return;
+
   sendingChat = true;
   $("chatInput").value = "";
-  $("chatStatus").textContent = "Your bestie is thinking... ♡";
+  $("chatInput").disabled = true;
+  chatSendButton.disabled = true;
+  setChatStatus("Your bestie is thinking... ♡");
+
   const chatRef = ref(db, `users/${currentUser.uid}/chat`);
+
+  // Build context before saving the new message, so it cannot accidentally be duplicated.
+  const recent = Object.entries(chatItems)
+    .sort((a,b) => (a[1].createdAt || 0) - (b[1].createdAt || 0))
+    .slice(-10)
+    .map(([, item]) => ({ role: item.role, content: String(item.text || "").slice(0, 2000) }));
+  recent.push({ role: "user", content: text });
+
   try {
     await set(push(chatRef), { role: "user", text, createdAt: Date.now() });
-    const recent = Object.entries(chatItems)
-      .sort((a,b) => (a[1].createdAt || 0) - (b[1].createdAt || 0))
-      .slice(-11)
-      .map(([, item]) => ({ role: item.role, content: item.text }));
-    recent.push({ role: "user", content: text });
     const result = await askBestie({ messages: recent });
-    const answer = result.data.answer;
-    await set(push(chatRef), { role: "assistant", text: answer, createdAt: Date.now() });
-    $("chatStatus").textContent = "";
+    const answer = result?.data?.answer;
+
+    if (typeof answer !== "string" || !answer.trim()) {
+      throw new Error("The AI function returned an empty answer.");
+    }
+
+    await set(push(chatRef), { role: "assistant", text: answer.trim(), createdAt: Date.now() });
+    setChatStatus("♡");
+    setTimeout(() => {
+      if ($("chatStatus").textContent === "♡") setChatStatus("");
+    }, 1800);
   } catch (error) {
-    console.error("Chat error:", error);
-    $("chatStatus").textContent = error.code === "functions/not-found"
-      ? "The AI chat function is not deployed yet. Follow the setup guide in README."
-      : "The chat could not reply right now. Please try again in a moment.";
+    setChatStatus(explainChatError(error), "error");
   } finally {
     sendingChat = false;
+    $("chatInput").disabled = false;
+    chatSendButton.disabled = false;
+    $("chatInput").focus();
   }
 });
 
-persistenceReady.catch(error => {
-  console.warn("Auth persistence could not be set:", error);
-});
+persistenceReady.catch(error => console.warn("Auth persistence could not be set:", error));
 
 onAuthStateChanged(auth, async user => {
   if (!user) {
